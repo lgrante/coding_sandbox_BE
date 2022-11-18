@@ -102,6 +102,7 @@ object_resolve(object_t *object, const char *path, void *value, size_t length)
 		match->length = length;
 		return match;
 	}
+
 	return NULL;
 }
 
