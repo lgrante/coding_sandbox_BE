@@ -1,0 +1,16 @@
+{
+  "name": "coding_sandbox_be",
+  "version": "1.0.0",
+  "description": "API for web interactive and educative debugger for any compiled language",
+  "main": "index.js",
+  "scripts": {
+    "dev": "export NODE_OPTIONS=\"--max-old-space-size=8192\"; nodemon",
+    "build": "echo \"build command: TODO\" && exit 0",
+    "test": "echo \"tests: TODO\" && exit 0"
+  },
+  "author": "Louis GRANTE",
+  "license": "ISC",
+  "devDependencies": {
+    "elf-tools": "^1.1.2"
+  }
+}
