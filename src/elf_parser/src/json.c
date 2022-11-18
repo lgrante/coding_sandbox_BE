@@ -97,6 +97,7 @@ object_resolve(object_t *object, const char *path, void *value, size_t length)
 			return object_resolve(children, path, value);
 		}
 
+		match->hash_key = create_hash_key(key);
 		match->children = value;
 		match->length = length;
 		return match;
