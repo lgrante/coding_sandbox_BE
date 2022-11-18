@@ -92,7 +92,7 @@ object_resolve(object_t *object, const char *path, void *value, size_t length)
 		}
 
 		if (match->length > 1 && match->children != NULL) {
-			const object_t **children = (object_t **) match->children;
+			object_t **children = (object_t **) match->children;
 
 			return object_resolve(children, path, value);
 		}
