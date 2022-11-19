@@ -18,9 +18,6 @@ object_t *
 create_object();
 
 void *
-object_find(object_t *object, const char *key);
-
-void *
 object_resolve(object_t *object, const char *path, void *value);
 
 object_t *
