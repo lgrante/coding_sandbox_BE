@@ -1,5 +1,5 @@
 SRC		=	main.c \
-			./src/json_new.c \
+			./src/json.c \
 			./src/utils.c
 
 OBJ		=	$(SRC:.c=.o)

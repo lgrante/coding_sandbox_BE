@@ -1,151 +1,95 @@
+#include "utils.h"
 #include "json.h"
 
 
-unsigned long
-create_hash_key(const char *key)
+void
+init_prop(object_t *obj, void *data, uint8_t data_type)
 {
-	unsigned long hash = 5381;
-	int c;
+	obj->data_type = data_type;
+	obj->child[0] = data;
+	obj->child[1] = NULL;
+	obj->len = 0;
+}
 
-	while ((c = *key++)) {
-		hash = ((hash << 5) + hash) + c;
+
+int8_t
+init_parent(object_t *obj, size_t len)
+{
+	object_t **children = malloc(len * sizeof(object_t *));
+
+	THROW_IF(children, INIT_CHILD_FAILED, -1);
+
+	for (register size_t i = 0; i < len; i++) {
+		children[i] = NULL;
 	}
 
-	return hash;
+	obj->child[0] = NULL;
+	obj->child[1] = (void *) children;
+	obj->len = len;
+
+	return 0;
 }
 
 
 object_t *
-create_object(const char *key, void *value, size_t len, uint8_t has_children)
+new_obj(const char *key, uint8_t type, ...)
 {
-	object_t *obj = malloc(sizeof(struct object));
+	object_t *obj = malloc(sizeof(object_t));
+	va_list args;
 
-	if (obj == NULL) {
-		return NULL;
-	}
+	THROW_IF(type == 0 || type == 1, BAD_DATA_TYPE, NULL);
+	THROW_IF(obj != NULL, INIT_OBJECT_FAILED, NULL);
 
-	if (has_children) {
-		obj->children = malloc(len * sizeof(object_t *));
+	va_start(args, type);
 
-		if (obj->children == NULL) {
+	obj->hash_key = create_hash_key(key);
+	obj->child_type = type;
+
+	if (type == 0) {
+		init_prop(obj, va_arg(args, void *), (uint8_t) va_arg(args, int));
+	} else if (type == 1) {
+		if (init_parent(obj, va_arg(args, size_t)) < 0) {
+			free(obj);
 			return NULL;
 		}
-	} else {
-		obj->children = value;
 	}
 
-	obj->hash_key = key == NULL ? 0 : create_hash_key(key);
-	obj->length = len;
-	obj->has_children = has_children;
+	va_end(args);
 
 	return obj;
 }
 
 
-char *
-get_next_key(char **path)
-{
-	register size_t i = 0;
-	char *key = NULL;
-
-	if (*path == NULL || (*path)[0] == 0) {
-		return NULL;
-	}
-
-	for (; (*path)[i] && (*path)[i] != '.'; i++);
-
-	if ((key = malloc((i + 1) * sizeof(char))) == NULL) {
-		return NULL;
-	}
-
-	for (i = 0; (*path)[i] && (*path)[i] != '.'; i++) {
-		key[i] = (*path)[i];
-	}
-
-	key[i] = 0;
-	*path = *path + i + ((*path)[i] != 0);
-
-	return key;
-}
-
-
 void *
-object_find(object_t *object, const char *key)
+object_get_child(object_t *obj, const char *key)
 {
-	const unsigned long hash_key = create_hash_key(key);
+	unsigned long hash_key = create_hash_key(key);
+	
+	THROW_IF(obj != NULL, OBJECT_NULL, NULL);
 
-	if (object->has_children == 0 || object->length == 0 || object->children == NULL) {
-		return NULL;
-	}
+	void *child = CHILD(obj);
 
-	object_t **children = (object_t **) object->children;
+	if (obj->data_type == 0 && hash_key == obj->hash_key) {
+		return child;
+	} else if (obj->data_type == 1) {
+		object_t **children = (object_t **) child;
 
-	for (register size_t i = 0; i < object->length; i++) {
-		if (children[i]->hash_key == hash_key) {
-			object_t *match = (object_t *) children[i];
-
-			return match;
+		for (register size_t i = 0; i < obj->len; i++) {
+			if (children[i]->hash_key == hash_key) {
+				return CHILD(children[i], key);
+			}
 		}
-	}
+	}	
+	
+	return NULL;
 }
 
 
-void
-object_add_children(object_t *object, object_t *child)
-{
-	if (object->has_children == 0 || object->length == 0 || object->children == NULL) {
-		object->children = malloc(sizeof(object_t *));
-		object->length = 1;
-		object->has_children = 1;
-	}
-
-	const object_t **children = (object_t **) object->children;
-	object_t **new_children = malloc((object->length + 1) * sizeof(object_t *));
-
-	for (register size_t i = 0; i < object->length; i++) {
-		new_children[i] = children[i];
-	}
-
-	new_children[object->length] = child;
-	free(object->children);
-	object->length = object->length + 1;
-}
 
 
-void *
-object_resolve(object_t **object, const char *path, object_t *value)
-{
-	const char *path_copy = strdup(path);
-	char *key =  get_next_key(&path);
-	object_t *match = (object_t *) object_find(*object, key);
-
-	if (match == NULL) {
-		if (value->children == NULL && value->length == 0) {
-			return NULL;
-		}
-
-		if (strcmp(path_copy, key) != 0) {
-			object_t *child = create_object(key, NULL, 1, 1);
-
-			object_add_children(*object, child);
-		} else {
-			free(*object);
-			*object = value;
-			return (*object)->children;
-		}
-
-		free(key);
-		free(path_copy);
-	}
-	return object_resolve(object, path, value);
-}
 
 
-/*
-object_t
-object_delete_property(object_t *object, const char *path);
 
 
-void
-object_json_export(object_t *object, const char *filepath);
-*/
+
+
